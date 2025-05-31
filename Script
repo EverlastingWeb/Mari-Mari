@@ -1,0 +1,87 @@
+// ==UserScript==
+// @name         Mari
+// @namespace    http://tampermonkey.net/
+// @version      1.4
+// @description  Plays a sound at random intervals (1-10 minutes) with random volume
+// @author       EverlastingWeb
+// @match        *://*/*
+// @grant        none
+// ==/UserScript==
+
+(function() {
+    'use strict';
+
+    // Configuration
+    const config = {
+        soundFile: 'https://github.com/EverlastingWeb/Mari-Mari/blob/b5d68ab92d9e3cdd857d15c207cbc832aaac5cda/Mari%20Mari%20has%20things%20to%20say.mp3?raw=true',
+        minInterval: 1,     // 1 minute minimum
+        maxInterval: 10,    // 10 minutes maximum
+        minVolume: 0.2,     // 20% minimum volume
+        maxVolume: 1.0,     // 100% maximum volume
+        initialDelay: 5000, // 5 second initial delay
+        enableLogging: true 
+    };
+
+    // Convert minutes to milliseconds
+    function minutesToMs(minutes) {
+        return minutes * 60 * 1000;
+    }
+
+    // Get random interval (1-10 minutes)
+    function getRandomInterval() {
+        return Math.floor(Math.random() * 
+              (minutesToMs(config.maxInterval) - minutesToMs(config.minInterval) + 1)) 
+              + minutesToMs(config.minInterval);
+    }
+
+    // Get random volume (20-100%)
+    function getRandomVolume() {
+        return Math.random() * (config.maxVolume - config.minVolume) + config.minVolume;
+    }
+
+    function playSound() {
+        const audio = new Audio(config.soundFile);
+        const volume = getRandomVolume();
+        audio.volume = volume;
+        
+        audio.addEventListener('error', (e) => {
+            if (config.enableLogging) {
+                console.error('Sound error:', e);
+                console.log('Trying to load:', config.soundFile);
+            }
+        });
+        
+        audio.play().catch(e => {
+            if (config.enableLogging) console.error('Playback blocked:', e);
+        });
+        
+        if (config.enableLogging) {
+            console.log('Playing at ' + new Date().toLocaleTimeString() + 
+                        ' (Volume: ' + Math.round(volume * 100) + '%)');
+        }
+    }
+
+    function scheduleNextPlay() {
+        const interval = getRandomInterval();
+        const nextTime = new Date(Date.now() + interval);
+        
+        if (config.enableLogging) {
+            console.log('Next sound at ' + nextTime.toLocaleTimeString());
+        }
+        
+        setTimeout(() => {
+            playSound();
+            scheduleNextPlay();
+        }, interval);
+    }
+
+    // Start with initial delay
+    setTimeout(() => {
+        playSound();
+        scheduleNextPlay();
+    }, config.initialDelay);
+
+    if (config.enableLogging) {
+        console.log('Random Sound Reminder active (1-10 minute intervals, random volume)');
+    }
+})();
